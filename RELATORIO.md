@@ -98,3 +98,17 @@ de aceitação não pegaram o defeito. --> Meus testes de regressão são "test_
 <!-- Na Etapa 3(b), as curvas linear e spline dão praticamente o mesmo desvio, mas viéses bem
 diferentes para PT102. Explique a diferença entre precisão e exatidão com esses números e
 por que a média de quase 600 leituras não elimina o viés da curva linear. --> Precisão é a dispersão das leituras, o desvio de PT102 é 0.522 kPa (linear) e 0.523 kPa (spline), praticamente iguais, porque o ruído aleatório do transmissor é o mesmo nas duas curvas. Exatidão é a proximidade do valor verdadeiro, a spline tem viés de 0.000 kPa e a linear, de −1.829 kPa, porque a curva linear erra a forma da calibração. A média de 595 leituras válidas reduz só o erro aleatório: o erro padrão é 0.523/√595 ≈ 0.021 kPa. O erro sistemático é igual em todas as leituras, então a média herda o viés inteiro, mais de 80 vezes maior que o erro padrão. Por isso "medir" soma a "u_sistematica" (1.5 kPa), que não diminui com o número de leituras.
+
+
+## Marco 3
+
+### R11 — Bissecção × Newton
+
+<!-- Na Etapa 2(a), a bissecção gasta sempre 44 iterações, qualquer que seja o Reynolds. Por
+quê? Com os erros da Etapa 2(b), explique o que significa ordem de convergência 2. Dê uma
+situação em que o Newton falha e a bissecção não. --> A bissecção parte de [2, 15], de largura 13, e a cada iteração a largura cai pela metade. Ela para quando 13/2^k < 1e-12, ou seja, k > log2(1,3e13) ≈ 43,6, então k = 44. Esse número só depende da largura e da tolerância, e não do Reynolds. Ordem de convergência 2 significa e_{k+1} ≈ C·e_k²: o número de dígitos corretos dobra a cada passo. Para Re = 1e4, os erros foram 5.0e-02, 2.3e-05 e 5.0e-12, cerca de 1, 4 e 11 dígitos corretos, com ordem estimada de 2.00. O Newton falha e a bissecção não quando a derivada é zero no ponto atual, então o código levanta "ValueError", ou quando o ponto inicial está longe da raiz e a iteração diverge, como em f(x) = x^(1/3) com x₀ ≠ 0, em que x_{k+1} = −2·x_k. A bissecção só exige f contínua e troca de sinal em [a, b].
+
+### R12 — Issue #9
+
+<!-- Os nomes dos seus testes de regressão; por que calcular a derivada uma vez só deixa a
+convergência linear; por que os testes de aceitação não pegaram o defeito. --> Meus testes de regressão são 'test_recalcula_a_derivada_a_cada_iteracao' e 'test_converge_em_poucas_iteracoes': os dois falhavam com o código original e passam depois da correção. Com a derivada calculada uma vez só, em x₀, a iteração vira x_{k+1} = x_k − f(x_k)/f'(x₀). Como f'(x₀) ≠ f'(raiz), o erro só é multiplicado por uma constante menor que 1 a cada passo, então a convergência é linear. Recalculando f'(x_k) a cada iteração, essa constante tende a zero perto da raiz e a convergência fica quadrática. Para Re = 1e4, o relato da issue dava 10 iterações e, depois da correção, a tabela 2(a) mostra 5. Os testes de aceitação não pegaram o defeito porque só conferem se a raiz está certa, e o Newton defeituoso ainda chega à raiz certa. Nenhum deles verifica o número de iterações nem a ordem de convergência.
