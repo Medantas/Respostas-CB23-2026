@@ -71,3 +71,30 @@ O que mais me surpreendeu foi o s.sum() devolver uma SerieTemporal e não um nú
 - Correção: um 0 no início da soma acumulada (faz o papel de acumulada[-1]) e .view(SerieTemporal), porque o concatenate devolve ndarray.
 - Por que a aceitação não pegou: test_media_movel_tipo_e_erros só confere o tipo e os ValueError (janela 0 e 6); o outro uso só confere que self não muda. Nenhum confere tamanho nem valores.
 - Caso não coberto: janela == len(serie) (devolvia 0 valores); coberto por test_media_movel_janela_igual_ao_tamanho.
+
+## Marco 2
+
+### Ambiente
+
+<!-- Cole a saída da Etapa 0 do `python marco2.py`. --> === Etapa 0: ambiente ===
+Python 3.14.4 | NumPy 2.5.4 | SciPy 1.18.1 | fornecido 4.0 | matrícula 3476
+
+### R8 — Derivada numérica
+
+<!-- Com a tabela da Etapa 1(b): por que o erro diminui quando h vai de 1 até cerca de 1e-5 e
+depois volta a crescer? Que tipo de erro domina em cada lado? Por que, em h = 1e-14, o erro
+é exatamente a própria derivada? (Experimente 1000 + 1e-14 == 1000.) --> Para h grande domina o erro de truncamento, a diferença só aproxima a derivada e o erro é proporcional a h, de 1.658e-05 em h = 1 a 1.654e-08 em h = 1e-3, caindo cerca de 10 vezes a cada passo. Para h muito pequeno domina o erro de arredondamento, f(x+h) e f(x) ficam quase iguais, a subtração perde algarismos significativos e a divisão por h amplifica isso. O menor erro foi em h = 1e-5, com 6.224e-10, onde os dois efeitos se equilibram. Em h = 1e-14, "1000 + 1e-14 == 1000" dá "True", h é menor que metade do espaçamento entre floats perto de 1000, então x+h é o mesmo float que x e f(x+h) − f(x) = 0. A derivada numérica vale 0 e o erro é |0 − 0.2134|.
+
+
+
+### R9 — Issue #7
+
+<!-- Os nomes dos seus testes de regressão; a causa: por que, em ponto flutuante,
+t - (s + y) dá sempre zero, embora seja algebricamente igual a (t - s) - y; por que os testes
+de aceitação não pegaram o defeito. --> Meus testes de regressão são "test_um_milhao_de_pulsos" e "test_mais_preciso_que_o_ingenuo", falhavam com o código original e passam depois da correção. Causa: "t = soma + y" já é o resultado arredondado, e na linha com defeito "soma + y" é calculado de novo e dá exatamente o mesmo float, então "t - (soma + y)" é sempre 0 e a correção nunca existe. Algebricamente isso é igual a (t - soma) - y, mas em ponto flutuante só essa ordem recupera a parte que o arredondamento perdeu. Os testes de aceitação não pegaram o defeito porque somam só 10 parcelas e comparam com "math.isclose", cuja tolerância esconde um erro dessa ordem. Ele só aparece com muitas parcelas, como no 1 000 000 da issue (total 100000.00000133288, erro de 1.333e-06 L).
+
+### R10 — Precisão × exatidão
+
+<!-- Na Etapa 3(b), as curvas linear e spline dão praticamente o mesmo desvio, mas viéses bem
+diferentes para PT102. Explique a diferença entre precisão e exatidão com esses números e
+por que a média de quase 600 leituras não elimina o viés da curva linear. --> Precisão é a dispersão das leituras, o desvio de PT102 é 0.522 kPa (linear) e 0.523 kPa (spline), praticamente iguais, porque o ruído aleatório do transmissor é o mesmo nas duas curvas. Exatidão é a proximidade do valor verdadeiro, a spline tem viés de 0.000 kPa e a linear, de −1.829 kPa, porque a curva linear erra a forma da calibração. A média de 595 leituras válidas reduz só o erro aleatório: o erro padrão é 0.523/√595 ≈ 0.021 kPa. O erro sistemático é igual em todas as leituras, então a média herda o viés inteiro, mais de 80 vezes maior que o erro padrão. Por isso "medir" soma a "u_sistematica" (1.5 kPa), que não diminui com o número de leituras.
